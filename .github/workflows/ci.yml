@@ -29,7 +29,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: directory_structure.txt
-          path: ${{ github.workspace }}/
+          path: ${{ github.workspace }}/directory_structure.txt
           retention-days: 1
           if-no-files-found: error
 
@@ -99,7 +99,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: directory_structure.txt
-          path: ${{ github.workspace }}/
+          path: ${{ github.workspace }}/directory_structure.txt
 
 
       - name: Show directory structure
