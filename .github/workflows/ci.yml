@@ -1,0 +1,107 @@
+name: CI
+
+on:
+  push:
+    branches: [ "develop" ]
+  pull_request:
+    branches: [ "main" ]
+
+  workflow_dispatch:
+
+jobs:
+  wellcome:
+    runs-on: ubuntu-latest
+    # continue-on-error directive is used to continue the workflow even if the current job fails
+    continue-on-error: true
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        
+      - name: Wellcome
+        run: echo "Wellcome to the CI/CD pipeline"
+
+      - name: Show directory structure
+        run: |
+            ls -R > directory_structure.txt
+
+      - name: Upload directory structure
+        uses: actions/upload-artifact@v2
+        with:
+          name: directory_structure.txt
+          path: ${{ github.workspace }}/
+          retention-days: 1
+          if-no-files-found: error
+
+  unit_tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        
+      - name: npm Unit tests
+        working-directory: code/my-node-app
+        run: |
+            npm install --save-dev jest
+            npm install --save-dev supertest
+            npm test  --passWithNoTests
+
+  build_and_test:
+    # runs-on directive specifies the type of runner that the job will run on
+    runs-on: ubuntu-latest
+    # needs directive is used to define the dependencies of the job
+    needs: unit_tests
+    # outputs directive is used to pass data between jobs
+    outputs:
+      response: ${{ steps.test_app.outputs.response }}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        
+      - name: Build
+        working-directory: code/my-node-app
+        run: |
+            npm install
+            (npm start)&
+            echo "App is running"
+      
+      - name: Test if the app is running
+        id: test_app
+        run: |
+            response=$(curl -s http://localhost:3000)
+            # GITHUB_OUTPUT is an environment variable that is used to pass data between jobs
+            echo "response=${response//$'\n'/ }" >> $GITHUB_OUTPUT
+
+  test_results:
+    runs-on: ubuntu-latest
+    # an array of jobs that the current job depends on could be specified
+    needs: [ build_and_test, wellcome ]
+    timeout-minutes: 5
+
+    steps:
+      - name: Output response
+        run: |
+              # needs.build_and_test.outputs.response is used to access the response from the previous job
+              echo -e "\033[33mTest passed with response: ${{ needs.build_and_test.outputs.response }}\033[0m"
+
+      - name: Test validation
+        run: |
+            if [[ $(grep -c 'Hello' <<< "${{ needs.build_and_test.outputs.response }}") -eq 1 ]]; then
+              echo "Test passed"
+            else
+              echo "Test failed"
+              exit 1
+            fi
+
+      - name: Download test results
+        uses: actions/download-artifact@v2
+        with:
+          name: directory_structure.txt
+          path: ${{ github.workspace }}/
+
+
+      - name: Show directory structure
+        run: |
+            cat directory_structure.txt
