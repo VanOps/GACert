@@ -28,7 +28,7 @@ jobs:
       - name: Upload directory structure
         uses: actions/upload-artifact@v4
         with:
-          name: directory_structure.txt
+          name: directory_structure.zip
           path: ${{ github.workspace }}/directory_structure.txt
           retention-days: 1
           if-no-files-found: error
@@ -99,9 +99,10 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: directory_structure.txt
-          path: ${{ github.workspace }}/directory_structure.txt
+          path: ${{ github.workspace }}/directory_structure.zip
 
 
       - name: Show directory structure
         run: |
+            unzip directory_structure.zip
             cat directory_structure.txt
